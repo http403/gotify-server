@@ -15,6 +15,12 @@ jobs:
   build-artifacts:
     runs-on: ubuntu-latest
     steps:
+      - name: Detailed System Info
+        run: |
+          echo "::debug::Detailed System Info"
+          echo "::debug::PATH=$PATH"
+          echo "::debug::$(ls -lh $GOPATH/bin)"
+
       - name: Checkout code
         uses: actions/checkout@v2
         with:
@@ -44,6 +50,10 @@ jobs:
 
       - name: Bundle WebUI
         run: make embed-static
+
+      - name: GOPATH BIN Debug
+        run: |
+          echo "::debug::$(ls -lh $GOPATH/bin)"
 
       - name: Check & Test
         run: |
