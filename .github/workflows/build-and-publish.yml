@@ -1,0 +1,158 @@
+name: Build and Publish
+
+on:
+  schedule:
+    - cron: '0 0 */7 * *' # Regularly build weekly
+  push:
+  release: 
+    types: [published]
+  repository_dispatch:
+    types: [upstream-updated]
+
+env:
+  GCR_HOST: us.gcr.io
+  
+
+jobs:
+  build-artifacts:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+        with:
+          ref: 'master'
+
+      - name: Get dependencies
+        run: make download-tools && go get -d
+
+      - name: Check && Test
+        run: make check && make test
+
+      - name: Build UI
+        run: make build-js
+
+      - name: Run Packr
+        run: go run hack/packr/packr.go
+
+      - name: Compile Binary
+        env:
+          LD_FLAGS: >
+          "-w -s -X main.Version=$(git describe --tags | cut -c 2-) -X main.BuildDate=$(date "+%F-%T") -X main.Commit=$(git rev-parse --verify HEAD) -X main.Mode=prod"
+        run: make build
+
+      - name: Upload artifacts
+        uese: actions/upload-artifact@v2
+        with:
+          name: build
+          path: build/gotify-*
+
+  image-tags: 
+    runs-on: ubuntu-latest
+    
+    outputs:
+      ref: ${{ env.IMAGE_REF_TAG }}
+      sha: ${{ env.IMAGE_SHA_TAG }}
+
+    steps:
+      - name: Set image ref tag
+        run: |
+          import os
+          ref = os.environ['GITHUB_REF'].split('/')[1:]
+          if ref[0] == 'heads':
+              if ref[1] == 'master':
+                  os.environ['IMAGE_REF_TAG'] = 'latest'
+              else:
+                  os.environ['IMAGE_REF_TAG'] = '-'.join(ref[1:])
+          elif ref[0] == 'pull':
+              os.environ['IMAGE_REF_TAG'] = f'pr-{"-".join(ref[1:])}'
+          elif ref[0] == 'tags':
+              os.environ['IMAGE_REF_TAG'] = ref[1]
+        shell: python
+
+      - name: Set image SHA tag
+        run: |
+          import os
+          sha = os.environ['GITHUB_SHA'][:7]
+          os.environ['IMAGE_SHA_TAG'] = f'git-{sha}''
+        shell: python
+
+  # Build container image
+  build-amd64-image:
+    runs-on: ubuntu-latest
+    needs: build-artifacts
+   
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+        with:
+          ref: 'master'
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: build
+          path: build
+
+      - name: Build linux/amd64 image
+        run: |
+          cp build/gotify-linux-amd64 docker/gotify-app
+          docker build -f docker/Dockerfile -t gotify:amd64 docker/
+          rm docker/gotify-app
+
+      - name: Export image
+        run: docker save -o="docker/gotify-amd64-container-image.tar" gotify
+
+      - name: Upload Image
+        uses: actions/upload-artifact@v2
+        with:
+          name: gotify-amd64-container-image
+          path: docker/gotify-amd64-container-image.tar
+
+  # TODO: Multi-platform build
+
+  # Push image to different registries
+  docker-hub:
+    runs-on: ubuntu-latest
+    needs: [build-amd64-image, image-tags]
+    steps:
+      - name: Get the amd64 images
+        uses: actions/download-artifacts@v2
+        with:
+          name: gotify-amd64-container-image
+
+      - name: Import the image
+        run: docker load -i gotify-amd64-container-image.tar
+
+      - name: Tag the image
+        run: |
+          docker tag gotify:amd64 ${{ secrets.DOCKER_USERNAME }}/gotify-server:${{ needs.image-tags.outputs.ref }}
+          docker tag gotify:amd64 ${{ secrets.DOCKER_USERNAME }}/gotify-server:${{ needs.image-tags.outputs.sha }}
+
+      - name: Login docker cli
+        run: docker login --username ${{ secrets.DOCKER_USERNAME }} --password ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Push image
+        run: docker push ${{ secrets.DOCCKER_USERNAME }}/gotify-server
+
+  gce-cr:
+    runs-on: ubuntu-latest
+    needs: [build-artifacts, image-tags]
+    steps:
+      - name: Get the amd64 images
+        uses: actions/download-artifacts@v2
+        with:
+          name: gotify-amd64-container-image
+
+      - name: Import the image
+        run: docker load -i gotify-amd64-container-image.tar
+
+      - name: Tag the image
+        run: |
+          docker tag gotify:amd64 ${{ env.GCR_HOST }}/${{ secrets.GCE_PROJECT }}/gotify-server:${{ needs.image-tags.outputs.ref }}
+          docker tag gotify:amd64 ${{ env.GCR_HOST }}/${{ secrets.GCE_PROJECT }}/gotify-server:${{ needs.image-tags.outputs.sha }}
+
+      - name: Login docker cli
+        run: docker login --username _json_key --password ${{ secrets.GCE_CR_TOKEN }} https://${{ env.GCR_HOST }}
+
+      - name: Push image
+        run: docker push ${{ env.GCR_HOST }}/${{ secrets.DOCCKER_USERNAME }}/gotify-server
