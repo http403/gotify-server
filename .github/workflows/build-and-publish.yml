@@ -19,12 +19,18 @@ jobs:
         run: |
           echo "::debug::Detailed System Info"
           echo "::debug::PATH=$PATH"
+          echo "::debug::GOPATH=$GOPATH"
           echo "::debug::$(ls -lh $GOPATH/bin)"
 
       - name: Checkout code
         uses: actions/checkout@v2
         with:
           ref: 'master'
+
+      - name: Setup GO Environment
+        uses: actions/setup-go@v2
+        with:
+          go-version: '^1.14.6'
 
       - name: Cache GO Packages
         uses: actions/cache@v2
@@ -53,7 +59,10 @@ jobs:
 
       - name: GOPATH BIN Debug
         run: |
+          echo "::debug::GOPATH=$GOPATH"
           echo "::debug::$(ls -lh $GOPATH/bin)"
+          echo "::debug::GOBIN=$GOBIN"
+          echo "::debug::$(ls -lh $GOBIN)"
 
       - name: Check & Test
         run: |
