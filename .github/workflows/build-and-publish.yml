@@ -21,7 +21,7 @@ jobs:
       - name: Get dependencies
         run: make download-tools && go get -d
 
-      - name: Check && Test
+      - name: Check & Test
         run: make check && make test
 
       - name: Build UI
@@ -62,14 +62,14 @@ jobs:
               os.environ['IMAGE_REF_TAG'] = f'pr-{"-".join(ref[1:])}'
           elif ref[0] == 'tags':
               os.environ['IMAGE_REF_TAG'] = ref[1]
-        shell: python
+        shell: python3 {0}
 
       - name: Set image SHA tag
         run: |
           import os
           sha = os.environ['GITHUB_SHA'][:7]
-          os.environ['IMAGE_SHA_TAG'] = f'git-{sha}''
-        shell: python
+          os.environ['IMAGE_SHA_TAG'] = f'git-{sha}'
+        shell: python3 {0}
 
   # Build container image
   build-amd64-image:
