@@ -32,6 +32,7 @@ jobs:
         run: |
           make download-tools
           nvm install 12.10.0 && nvm alias default 12.10.0
+        shell: bash -l {0}
 
       - name: Install dependencies
         run: |
@@ -90,15 +91,6 @@ jobs:
           os.environ['IMAGE_SHA_TAG'] = f'git-{sha}'
         shell: python3 {0}
 
-      - name: Checkout code
-        uses: actions/checkout@v2
-        with:
-          ref: master
-
-      - name: Set version
-        id: gotify-version
-        run: echo "::set-output name=version::$(git describe --tags | cut -c 2-)"
-
   # Build container image
   build-amd64-image:
     runs-on: ubuntu-latest
@@ -150,7 +142,6 @@ jobs:
         run: |
           docker tag gotify:amd64 ${{ secrets.DOCKER_USERNAME }}/gotify-server:${{ needs.image-tags.outputs.ref }}
           docker tag gotify:amd64 ${{ secrets.DOCKER_USERNAME }}/gotify-server:${{ needs.image-tags.outputs.sha }}
-          docker tag gotify:amd64 ${{ secrets.DOCKER_USERNAME }}/gotify-server:${{ needs.image-tags.outputs.version }}
 
       - name: Login docker cli
         run: docker login --username ${{ secrets.DOCKER_USERNAME }} --password ${{ secrets.DOCKER_PASSWORD }}
@@ -176,7 +167,6 @@ jobs:
         run: |
           docker tag gotify:amd64 ${{ env.GCR_HOST }}/${{ secrets.GCE_PROJECT }}/gotify-server:${{ needs.image-tags.outputs.ref }}
           docker tag gotify:amd64 ${{ env.GCR_HOST }}/${{ secrets.GCE_PROJECT }}/gotify-server:${{ needs.image-tags.outputs.sha }}
-          docker tag gotify:amd64 ${{ env.GCR_HOST }}/${{ secrets.GCE_PROJECT }}/gotify-server:${{ needs.image-tags.outputs.version }}
 
       - name: Login docker cli
         run: docker login --username _json_key --password ${{ secrets.GCE_CR_TOKEN }} https://${{ env.GCR_HOST }}
