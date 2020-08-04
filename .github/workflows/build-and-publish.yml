@@ -9,10 +9,6 @@ on:
   repository_dispatch:
     types: [upstream-updated]
 
-env:
-  GCR_HOST: us.gcr.io
-  
-
 jobs:
   build-artifacts:
     runs-on: ubuntu-latest
@@ -36,8 +32,7 @@ jobs:
 
       - name: Compile Binary
         env:
-          LD_FLAGS: >
-          "-w -s -X main.Version=$(git describe --tags | cut -c 2-) -X main.BuildDate=$(date "+%F-%T") -X main.Commit=$(git rev-parse --verify HEAD) -X main.Mode=prod"
+          LD_FLAGS: -w -s -X main.Version=$(git describe --tags | cut -c 2-) -X main.BuildDate=$(date "+%F-%T") -X main.Commit=$(git rev-parse --verify HEAD) -X main.Mode=prod
         run: make build
 
       - name: Upload artifacts
@@ -137,6 +132,8 @@ jobs:
   gce-cr:
     runs-on: ubuntu-latest
     needs: [build-artifacts, image-tags]
+    env:
+      GCR_HOST: us.gcr.io
     steps:
       - name: Get the amd64 images
         uses: actions/download-artifacts@v2
