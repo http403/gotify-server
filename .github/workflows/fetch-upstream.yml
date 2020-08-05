@@ -27,19 +27,19 @@ jobs:
           echo "::set-env name=LOCAL_ISO_TIMESTAMP::$(git show -s --format=%cI HEAD)"
 
       - name: Get remote latest commit timestamp
-        run: echo "::set-env name=REMOTE_ISO_TIMESTAMP::$(curl -s $GITHUB_API_URL/repos/$REMOTE_REPO/commits | jq .[0].commit.committer.date)"
+        run: echo "::set-env name=REMOTE_ISO_TIMESTAMP::$(curl -s $GITHUB_API_URL/repos/$REMOTE_REPO/commits | jq .[0].commit.committer.date | sed 's/"//g')"
 
       - name: Convert remote timestamp to UNIX format
         run: echo "::set-env name=REMOTE_UNIX_TIMESTAMP::$(date --date=$REMOTE_ISO_TIMESTAMP +%s)"
 
       - name: Compare Local and Remote Timestamps and set it to output
         id: comparator
-        run: echo "::set-output name=updated::${{ env.REMOTE_UNIX_TIMESTAMP > env.LOCAL_UNIX_TIM }}"
+        run: echo "::set-output name=updated::${{ env.REMOTE_UNIX_TIMESTAMP > env.LOCAL_UNIX_TIMESTAMP }}"
         
   fetch:
     runs-on: ubuntu-latest
     needs: check-update
-    if: ${{ needs.check-update.outputs.updated }}
+    if: ${{ needs.check-update.outputs.updated == 'true' }}
 
     steps:
       - name: Checkout code
