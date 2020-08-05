@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
 
     outputs:
-      updated: ${{ env.REMOTE_REPO_UPDATED }}
+      updated: ${{ steps.comparator.outputs.updated }}
 
     steps:
       - name: Checkout code
@@ -33,7 +33,8 @@ jobs:
         run: echo "::set-env name=REMOTE_UNIX_TIMESTAMP::$(date --date=$REMOTE_ISO_TIMESTAMP +%s)"
 
       - name: Compare Local and Remote Timestamps and set it to output
-        run: echo "::set-env name=REMOTE_REPO_UPDATED::${{ env.REMOTE_UNIX_TIMESTAMP > env.LOCAL_UNIX_TIM }}"
+        id: comparator
+        run: echo "::set-output name=updated::${{ env.REMOTE_UNIX_TIMESTAMP > env.LOCAL_UNIX_TIM }}"
         
   fetch:
     runs-on: ubuntu-latest
