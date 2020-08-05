@@ -185,7 +185,7 @@ jobs:
         run: echo ${{ env.DOCKER_PASSWORD }} | docker login --username ${{ env.DOCKER_USERNAME }} --password-stdin
 
       - name: Push image
-        run: docker push ${{ env.DOCCKER_USERNAME }}/gotify-server
+        run: docker push ${{ env.DOCKER_USERNAME }}/gotify-server
 
   gce-cr:
     runs-on: ubuntu-latest
