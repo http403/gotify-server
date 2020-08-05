@@ -98,23 +98,31 @@ jobs:
       - name: Set image ref tag
         run: |
           import os
-          ref = os.environ['GITHUB_REF'].split('/')[1:]
-          if ref[0] == 'heads':
+          gref = os.environ['GITHUB_REF'].split('/')[1:]
+          rref
+          if gref[0] == 'heads':
               if ref[1] == 'master':
-                  os.environ['IMAGE_REF_TAG'] = 'latest'
+                  rref = 'latest'  
               else:
-                  os.environ['IMAGE_REF_TAG'] = '-'.join(ref[1:])
-          elif ref[0] == 'pull':
-              os.environ['IMAGE_REF_TAG'] = f'pr-{"-".join(ref[1:])}'
-          elif ref[0] == 'tags':
-              os.environ['IMAGE_REF_TAG'] = ref[1]
+                  rref = '-'.join(gref[1:])
+          elif gref[0] == 'pull':
+              rref = f'pr-{"-".join(gref[1:])}'
+          elif gref[0] == 'tags':
+              rref = gref[1]
+          if rref:              
+            print(f'::set-env name=IMAGE_REF_TAG::{rref}')
+          else:
+            exit(-1)
         shell: python3 {0}
 
       - name: Set image SHA tag
         run: |
           import os
           sha = os.environ['GITHUB_SHA'][:7]
-          os.environ['IMAGE_SHA_TAG'] = f'git-{sha}'
+          if rref: 
+            print(f'::set-env name=IMAGE_SHA_TAG::git-{sha}')
+          else:
+            exit(-1)
         shell: python3 {0}
 
   # Build container image
