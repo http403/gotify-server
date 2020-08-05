@@ -59,6 +59,7 @@ jobs:
 
       - name: GOPATH BIN Debug
         run: |
+          echo "::debug::PATH=$PATH"
           echo "::debug::GOPATH=$GOPATH"
           echo "::debug::$(ls -lh $GOPATH/bin)"
           echo "::debug::GOBIN=$GOBIN"
@@ -69,9 +70,14 @@ jobs:
           make test
           make check
 
+      - name: Set version and build date
+        run: |
+          echo "::set-env name=GOTIFY_VERSION::$(git describe --tags | cut -c 2-)"
+          echo "::set-env name=BUILD_DATE::$(date "+%F-%T")"
+
       - name: Compile Binary
         env:
-          LD_FLAGS: -w -s -X main.Version=$(git describe --tags | cut -c 2-) -X main.BuildDate=$(date "+%F-%T") -X main.Commit=${{ github.sha }} -X main.Mode=prod
+          LD_FLAGS: -w -s -X main.Version=${{ env.GOTIFY_VERSION }} -X main.BuildDate=${{ env.BUILD_DATE }} -X main.Commit=${{ github.sha }} -X main.Mode=prod
         run: make build
 
       - name: Upload artifacts

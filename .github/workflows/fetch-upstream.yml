@@ -6,14 +6,14 @@ on:
   push:
 
 env:
-  REMOTE_REPO: gotify/cli
+  REMOTE_REPO: gotify/server
 
 jobs:
   check-update:
     runs-on: ubuntu-latest
 
     outputs:
-      updated: ${{ steps.comp.output.result }}
+      updated: ${{ env.REMOTE_REPO_UPDATED }}
 
     steps:
       - name: Checkout code
@@ -21,17 +21,19 @@ jobs:
         with:
           ref: master
 
-      - name: Extract UNIX and ISO8601 Timestamp
-        run: echo "::set-env name=LOCAL_UNIX_TIMESTAMP::$(git show -s --format=%ct HEAD),name=LOCAL_ISO_TIMESTAMP::$(git show -s --format=cI HEAD)"
+      - name: Extract and set UNIX and ISO8601 Timestamp
+        run: |
+          echo "::set-env name=LOCAL_UNIX_TIMESTAMP::$(git show -s --format=%ct HEAD)"
+          echo "::set-env name=LOCAL_ISO_TIMESTAMP::$(git show -s --format=%cI HEAD)"
 
       - name: Get remote latest commit timestamp
-        run: echo "::set-env name=REMOTE_ISO_TIMESTAMP::$(curl -s $GITHUB_API_URL/$REMOTE_REPO/commits | jq .[0].commit.committer.date)"
+        run: echo "::set-env name=REMOTE_ISO_TIMESTAMP::$(curl -s $GITHUB_API_URL/repos/$REMOTE_REPO/commits | jq .[0].commit.committer.date)"
 
       - name: Convert remote timestamp to UNIX format
         run: echo "::set-env name=REMOTE_UNIX_TIMESTAMP::$(date --date=$REMOTE_ISO_TIMESTAMP +%s)"
 
       - name: Compare Local and Remote Timestamps and set it to output
-        run: echo "::set-output name=result::${{ env.REMOTE_UNIX_TIMESTAMP > env.LOCAL_UNIX_TIM }}"
+        run: echo "::set-env name=REMOTE_REPO_UPDATED::${{ env.REMOTE_UNIX_TIMESTAMP > env.LOCAL_UNIX_TIM }}"
         
   fetch:
     runs-on: ubuntu-latest
