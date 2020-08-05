@@ -99,7 +99,7 @@ jobs:
         run: |
           import os
           gref = os.environ['GITHUB_REF'].split('/')[1:]
-          rref
+          rref = ''
           if gref[0] == 'heads':
               if ref[1] == 'master':
                   rref = 'latest'  
@@ -119,7 +119,7 @@ jobs:
         run: |
           import os
           sha = os.environ['GITHUB_SHA'][:7]
-          if rref: 
+          if sha: 
             print(f'::set-env name=IMAGE_SHA_TAG::git-{sha}')
           else:
             exit(-1)
