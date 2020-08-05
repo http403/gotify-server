@@ -101,7 +101,7 @@ jobs:
           gref = os.environ['GITHUB_REF'].split('/')[1:]
           rref = ''
           if gref[0] == 'heads':
-              if ref[1] == 'master':
+              if gref[1] == 'master':
                   rref = 'latest'  
               else:
                   rref = '-'.join(gref[1:])
